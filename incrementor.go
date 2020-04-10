@@ -7,17 +7,18 @@ import (
 	"sync"
 )
 
-// Incrementor тип, позволящий вести подсчет
+// Incrementor тип, позволяющий вести подсчет
 // возникновений определенного события, ресурсов и.т.д
-// Изменение счетчика реализована через мьютекс, потому что
+// Изменение счетчика реализовано через мьютекс, потому что
 // атомарная команда (sync/atomic) изменения переменной не гарантирует правильный
 // порядок доступа к участку памяти, операция над которым производится атомарно,
 // например, если одновременно с началом выполнения атомарной операции изменения участка памяти произоошло чтение этого участка памяти
 // из другого потока, нет гарантии что этот поток в итоге считает измененные атомарной операцией данные
 type Incrementor struct {
-	counter  int          // внутренний счетчик
-	maxValue int          // максимальное значение счетчика, по превышении которого счетчику присваивается нулевое значение
-	mtx      sync.RWMutex // мьютекс чтения/записи для блокировки одновременного доступа
+	counter     int          // внутренний счетчик
+	maxValue    int          // максимальное значение счетчика, по превышении которого счетчику присваивается нулевое значение
+	mtxCounter  sync.RWMutex // мьютекс чтения/записи для блокировки одновременного доступа к счетчику
+	mtxMaxValue sync.Mutex   // мьютекс для блокировки одновременного доступа к максимальному значени счетчика
 }
 
 // CreateIncrementor функция создает новый объет типа Incrementor и возвращает указатель на него.
@@ -30,11 +31,11 @@ func CreateIncrementor() *Incrementor {
 	return i
 }
 
-// Getcounter метод возваращет текущее значение счетчика
+// Getcounter метод возвращает текущее значение счетчика
 // Вызов метода потокобезопасен
 func (i *Incrementor) Getcounter() int {
-	i.mtx.RLock()
-	defer i.mtx.RUnlock()
+	i.mtxCounter.RLock()
+	defer i.mtxCounter.RUnlock()
 	counter := i.counter
 	return counter
 }
@@ -42,8 +43,8 @@ func (i *Incrementor) Getcounter() int {
 // Incrementcounter метод увеличивает значение счетчика
 // Вызов метода потокобезопасен
 func (i *Incrementor) Incrementcounter() {
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
+	i.mtxCounter.Lock()
+	defer i.mtxCounter.Unlock()
 	i.counter++
 	if i.counter > i.maxValue {
 		i.counter = 1
@@ -54,12 +55,14 @@ func (i *Incrementor) Incrementcounter() {
 // В случае, если новое значение меньше нуля, - возвращает ошибку
 // Вызов метода потокобезопасен
 func (i *Incrementor) SetMaximumValue(maximumValue int) error {
+	i.mtxMaxValue.Lock()
 	if maximumValue < 0 {
 		return errors.New("недопустимое значение максимального значения")
 	}
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
 	i.maxValue = maximumValue
+	i.mtxMaxValue.Unlock()
+	i.mtxCounter.Lock()
+	defer i.mtxCounter.Unlock()
 	if i.counter > i.maxValue {
 		i.counter = 0
 	}
