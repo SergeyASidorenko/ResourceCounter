@@ -18,7 +18,7 @@ type Incrementor struct {
 	counter     int          // внутренний счетчик
 	maxValue    int          // максимальное значение счетчика, по превышении которого счетчику присваивается нулевое значение
 	mtxCounter  sync.RWMutex // мьютекс чтения/записи для блокировки одновременного доступа к счетчику
-	mtxMaxValue sync.Mutex   // мьютекс для блокировки одновременного доступа к максимальному значени счетчика
+	mtxMaxValue sync.RWMutex // мьютекс чтения/записи для блокировки одновременного доступа к максимальному значени счетчика
 }
 
 // CreateIncrementor функция создает новый объет типа Incrementor и возвращает указатель на него.
@@ -43,10 +43,15 @@ func (i *Incrementor) Getcounter() int {
 // Incrementcounter метод увеличивает значение счетчика
 // Вызов метода потокобезопасен
 func (i *Incrementor) Incrementcounter() {
+	// блокируем доступ с возможность чтения
+	// к полю максимального значения счетчика
+	i.mtxMaxValue.RLock()
+	maxCounterValue := i.maxValue
+	i.mtxMaxValue.RUnlock()
 	i.mtxCounter.Lock()
 	defer i.mtxCounter.Unlock()
 	i.counter++
-	if i.counter > i.maxValue {
+	if i.counter > maxCounterValue {
 		i.counter = 1
 	}
 }
@@ -55,6 +60,7 @@ func (i *Incrementor) Incrementcounter() {
 // В случае, если новое значение меньше нуля, - возвращает ошибку
 // Вызов метода потокобезопасен
 func (i *Incrementor) SetMaximumValue(maximumValue int) error {
+	// блокируем доступ к полю максимального значения счетчика
 	i.mtxMaxValue.Lock()
 	if maximumValue < 0 {
 		return errors.New("недопустимое значение максимального значения")
