@@ -1,0 +1,6 @@
+config/*
+*.sql
+.vscode/*
+*.tmp
+*.log
+*.exe

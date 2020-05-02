@@ -1,6 +1,6 @@
-// Package test Пакет с реализацией тестового задания
+// Package incrementator Пакет с реализацией тестового задания
 // Реализован тип потокобезопасного счетчика с интерфейсом использования
-package test
+package incrementator
 
 import (
 	"sync"
