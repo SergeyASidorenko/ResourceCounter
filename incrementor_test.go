@@ -8,57 +8,73 @@ import (
 )
 
 // Тестирование функции создания счетчика
-func TestCreateIncrementor(t *testing.T) {
-	incObj := CreateIncrementor()
-	maxCounterValue := int(^uint(0) >> 1)
+func TestCreateIncrementator(t *testing.T) {
+	incObj := CreateIncrementator()
+	maxCounterValue := 100
 	expectedCounterValue := 0
+	expectedStepValue := 1
 	counter := incObj.counter
 	if counter != 0 {
-		t.Fatalf(`функция CreateIncrementor создает объект типа Incrementor с некорректным значением счетчика.\n
+		t.Fatalf(`функция CreateIncrementator создает объект типа Incrementator с некорректным значением счетчика.\n
 		Ожидалось: %d, получено: %d`, expectedCounterValue, counter)
 	}
 	if incObj.maxValue != maxCounterValue {
-		t.Fatalf(`функция CreateIncrementor создает объект типа Incrementor с некорректным максимальным значением.\n
+		t.Fatalf(`функция CreateIncrementator создает объект типа Incrementator с некорректным максимальным значением.\n
 		Ожидалось: %d, получено: %d`, maxCounterValue, incObj.maxValue)
+	}
+	if incObj.step != expectedStepValue {
+		t.Fatalf(`функция CreateIncrementator создает объект типа Incrementator с некорректным шагом инкрементации.\n
+		Ожидалось: %d, получено: %d`, expectedStepValue, incObj.step)
+	}
+}
+
+// Тестирование метода установки значения шага счетчика
+func TestStepValue(t *testing.T) {
+	expectedStepValue := 5
+	incObj := CreateIncrementator()
+	incObj.SetStep(expectedStepValue)
+	if incObj.step != expectedStepValue {
+		t.Fatalf(`функция SetStep отработала некорректно.\n
+		Ожидалось значения шага счетчика: %d, получено: %d`, expectedStepValue, incObj.step)
 	}
 }
 
 // Тестирование метода увеличения значения счетчика
 func TestIncrementNumber(t *testing.T) {
-	incObj := CreateIncrementor()
+	incObj := CreateIncrementator()
 	expectedCounterValue := 2
 	for i := 0; i < expectedCounterValue; i++ {
-		incObj.Incrementcounter()
+		incObj.IncrementNumber()
 	}
 	if incObj.counter != expectedCounterValue {
-		t.Fatalf(`функция Incrementcounter после %d вызовов отработала некорректно.\n
+		t.Fatalf(`функция IncrementNumber после %d вызовов отработала некорректно.\n
 		Ожидалось значение счетчика: %d, получено: %d`, expectedCounterValue, expectedCounterValue, incObj.counter)
 	}
 	incObj.maxValue = expectedCounterValue
-	incObj.Incrementcounter()
+	incObj.IncrementNumber()
 	if incObj.counter != 1 {
-		t.Fatalf(`функция Incrementcounter после перехода счетчика через максимальное значение отработала некорректно.\n
+		t.Fatalf(`функция IncrementNumber после перехода счетчика через максимальное значение отработала некорректно.\n
 		Ожидалось значение счетчика: %d, получено: %d`, 1, incObj.counter)
 	}
 }
 
 // Тестирование метода получения значения счетчика
 func TestGetNumber(t *testing.T) {
-	incObj := CreateIncrementor()
+	incObj := CreateIncrementator()
 	expectedCounterValue := 5
 	// вместо простого присваивания полю counter значения expectedCounterValue
 	// использую средства интерфейса данного типа, дабы симитиривать вызовы стороннего кода
 	for i := 0; i < expectedCounterValue; i++ {
-		incObj.Incrementcounter()
+		incObj.IncrementNumber()
 	}
-	if incObj.Getcounter() != expectedCounterValue {
-		t.Fatalf(`функция Getcounter отработала некорректно.\n
+	if incObj.GetNumber() != expectedCounterValue {
+		t.Fatalf(`функция GetNumber отработала некорректно.\n
 		Ожидалось значение счетчика: %d, получено: %d`, expectedCounterValue, incObj.counter)
 	}
 	incObj.maxValue = expectedCounterValue
-	incObj.Incrementcounter()
-	if incObj.Getcounter() != 1 {
-		t.Fatalf(`функция Getcounter после перехода счетчика через максимальное значение отработала некорректно.\n
+	incObj.IncrementNumber()
+	if incObj.GetNumber() != 1 {
+		t.Fatalf(`функция GetNumber после перехода счетчика через максимальное значение отработала некорректно.\n
 		Ожидалось значение счетчика: %d, получено: %d`, 1, incObj.counter)
 	}
 }
@@ -66,7 +82,7 @@ func TestGetNumber(t *testing.T) {
 // Тестирование метода установки максимального значения счетчика
 func TestSetMaximumValue(t *testing.T) {
 	maxCounterValue := 7
-	incObj := CreateIncrementor()
+	incObj := CreateIncrementator()
 	err := incObj.SetMaximumValue(-7)
 	if err == nil {
 		t.Fatal(`функция SetMaximumValue отработала некорректно.\n
@@ -84,7 +100,7 @@ func TestSetMaximumValue(t *testing.T) {
 	// вместо простого присваивания полю counter значения maxCounterValue+1
 	// использую средства интерфейса данного типа, дабы симитиривать вызовы стороннего кода
 	for i := 0; i < maxCounterValue; i++ {
-		incObj.Incrementcounter()
+		incObj.IncrementNumber()
 	}
 	err = incObj.SetMaximumValue(maxCounterValue - 1)
 	if err != nil {
@@ -92,7 +108,7 @@ func TestSetMaximumValue(t *testing.T) {
 		После установки максимального значения меньшего текущего значения 
 		счетчика функция вернула ошибку, ожидался сброс счетчика в нуль`)
 	}
-	counter := incObj.Getcounter()
+	counter := incObj.GetNumber()
 	if counter != 0 {
 		t.Fatal(`функция SetMaximumValue отработала некорректно.\n
 		После установки максимального значения меньшего текущего значения 
@@ -102,22 +118,22 @@ func TestSetMaximumValue(t *testing.T) {
 
 // Тестирование работы счетчика в многопоточном режиме
 func TestIncrementInParalell(t *testing.T) {
-	incObj := CreateIncrementor()
+	incObj := CreateIncrementator()
 	goroutineAmount := 10
 	var w sync.WaitGroup
 	w.Add(goroutineAmount)
 	// Запускаем определнное количество горутин, каждая из которых вызывает метод увеличения значения счетчика
 	for i := 0; i < goroutineAmount; i++ {
 		go func(w *sync.WaitGroup) {
-			incObj.Incrementcounter()
+			incObj.IncrementNumber()
 			w.Done()
 		}(&w)
 	}
 	w.Wait()
 	// ...проверям, каждой ли горутине удалось успешно вызвать метод
-	counter := incObj.Getcounter()
+	counter := incObj.GetNumber()
 	if counter != goroutineAmount {
-		t.Fatalf(`функция Incrementcounter отработала некорректно в конкурентом режиме.\n
+		t.Fatalf(`функция IncrementNumber отработала некорректно в конкурентом режиме.\n
 		Ожидалось значения счетчика: %d, получено: %d`, goroutineAmount, counter)
 	}
 }
@@ -127,7 +143,7 @@ func TestSetMaximumValueInParalell(t *testing.T) {
 	var w sync.WaitGroup
 	var mtx = sync.Mutex{}
 	ch := make(chan bool)
-	incObj := CreateIncrementor()
+	incObj := CreateIncrementator()
 	goroutineAmount := 10
 	// задаем максимальное число счетчика, ожидая что
 	// в многопоточном режиме последующие инкременты начнут отсчет заново
@@ -139,8 +155,8 @@ func TestSetMaximumValueInParalell(t *testing.T) {
 	for i := 0; i < goroutineAmount; i++ {
 		go func() {
 			mtx.Lock()
-			incObj.Incrementcounter()
-			if incObj.Getcounter() == maxCounterValue {
+			incObj.IncrementNumber()
+			if incObj.GetNumber() == maxCounterValue {
 				ch <- true
 				<-ch
 			}
@@ -154,7 +170,7 @@ func TestSetMaximumValueInParalell(t *testing.T) {
 		ch <- true
 	}()
 	w.Wait()
-	counter := incObj.Getcounter()
+	counter := incObj.GetNumber()
 	if counter != expectedCounterValue {
 		t.Fatalf(`функция SetMaximumValue отработала некорректно в конкурентом режиме.\n
 		Ожидалось значения счетчика: %d, получено: %d`, expectedCounterValue, counter)

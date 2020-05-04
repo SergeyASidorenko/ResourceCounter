@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  sqlite3:
+    image: nouchka/sqlite3:latest
+    container_name: sqlite3
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./data/db:/data/db
+  incrementator:
+    container_name: incrementator
+    restart: always
+    ports:
+      - 8080:8717
+    links:
+      - sqlite3
+    depends_on:
+      - sqlite3
+    build: ./

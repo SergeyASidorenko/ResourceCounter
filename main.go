@@ -26,10 +26,10 @@ type ServiceSettings struct {
 	tableName string
 }
 
-// Init инициализация запуска веб-сервиса (чтение настроек)
+// Load загрузка настроек веб-сервиса
 // settingsPath - путь к файлу настроек в формате JSON
 // Возвращает ошибку, если не удалось завершить работу
-func (s *ServiceSettings) Init(settingsPath string) (err error) {
+func (s *ServiceSettings) Load(settingsPath string) (err error) {
 	fSet, err := os.Open(settingsPath)
 	if err != nil {
 		return
@@ -41,26 +41,36 @@ func (s *ServiceSettings) Init(settingsPath string) (err error) {
 	return
 }
 
-// updateIncrementor метод обновления
+// updateIncrementator метод обновления
 // записи о состоянии счетчика во внешнем хранилище
 // на основе текущего значения счетчика
 // Вызов метода потокобезопасен
-func updateIncrementor(db *sql.DB, i *Incrementor) (err error) {
+func updateIncrementator(db *sql.DB, i *Incrementator) (err error) {
 	_, err = db.Exec(fmt.Sprintf("UPDATE %s SET value = ?, step = ?, max_value = ?", settings.tableName), i.counter, i.step, i.maxValue)
 	return
 }
 
-// initIncrementor инициализация состояния счетчика
+// initIncrementator инициализация состояния счетчика
 // Если во внешнем хранилище нет никаких сведений о прежних состояниях -
 // вносим запись в хранилище
 // Вызов метода потокобезопасен
-func initIncrementor(db *sql.DB) (i *Incrementor, err error) {
-	i = CreateIncrementor()
+func initIncrementator(db *sql.DB) (i *Incrementator, err error) {
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS incrementor
+	(
+		id    INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, 
+		value INTEGER,
+		step  INTEGER,
+		max_value INTEGER
+	)`)
+	if err != nil {
+		return
+	}
+	i = CreateIncrementator()
 	row := db.QueryRow(fmt.Sprintf("SELECT * FROM %s WHERE id = (SELECT MAX(id) AS id FROM %s)", settings.tableName, settings.tableName))
 	err = row.Scan(i)
 	// Если записей о текущем прогнозе еще нет - добавляем
 	if err == sql.ErrNoRows {
-		_, err = db.Exec(fmt.Sprintf("INSERT INTO %s VALUES(?,?,?)"), i.counter, i.step, i.maxValue)
+		_, err = db.Exec(fmt.Sprintf("INSERT INTO %s VALUES(?,?,?)", settings.tableName), i.counter, i.step, i.maxValue)
 	}
 	return
 }
@@ -75,19 +85,19 @@ func connectToDB(dbPath string) (*sql.DB, error) {
 	return db, nil
 }
 func main() {
-	db, err := connectToDB("incrementor.db")
+	db, err := connectToDB("incrementator.db")
 	if err != nil {
 		log.Fatalln(err)
 	}
 	settings = new(ServiceSettings)
 	// Читаем настройки
-	err = settings.Init("config/settings.json")
+	err = settings.Load("config/settings.json")
 	if err != nil {
 		log.Fatalf("Ошибка инициализации сервера: %s", err.Error())
 		return
 	}
 	// инициазизируем состояние счетчика
-	inc, err := initIncrementor(db)
+	inc, err := initIncrementator(db)
 	if err != nil {
 		log.Fatalln("не удалось инициализировать сервер")
 	}
