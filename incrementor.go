@@ -1,4 +1,4 @@
-package incrementator
+package main
 
 // 2020 Sergey Sidorenko.
 // Пакет с реализацией веб-сервиса работы со счетчиком

@@ -4,3 +4,4 @@ config/*
 *.tmp
 *.log
 *.exe
+client.go
