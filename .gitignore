@@ -5,3 +5,4 @@ config/*
 *.log
 *.exe
 client.go
+*.db
