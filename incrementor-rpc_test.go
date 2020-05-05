@@ -1,5 +1,8 @@
 package main
 
+// 2020 Sergey Sidorenko.
+// Пакет с реализацией RPC сервера работы со счетчиком
+// Сведения о лицензии отсутствуют
 import (
 	"encoding/json"
 	"io"
@@ -13,24 +16,29 @@ import (
 	"testing"
 )
 
-// Package main Пакет с реализацией тестового задания
-// Реализован тип потокобезопасного счетчика с интерфейсом использования
 var (
-	newServer                                                 *rpc.Server
-	defaultServerAddr, serverAddr, serverWithDBAddr           string
-	httpServerAddr                                            string
+	// RPC сервер
+	newServer *rpc.Server
+	// адреса развертываемых тестовых RPC серверов
+	defaultServerAddr, serverAddr, serverWithDBAddr, httpServerAddr string
+	// объекта для выполнения единоразовой инициализации развертываемых тестовых RPC серверов
 	defaultServerOnce, serverWithDBOnce, serverOnce, httpOnce sync.Once
-	tempDBName                                                string
+	// имя временной (для тестирования) БД
+	tempDBName string
 )
 
 const (
-	RPCHTTPPath               = "/testRPC"
-	RPCDebugHTTPPath          = "/debugRPC"
-	RPCHTTPPathIntegrate      = "/testRPCIntegrate"
+	// путь HTTP обработчика тестового RPC сервера
+	RPCHTTPPath = "/testRPC"
+	// путь HTTP обработчика тестового RPC сервера
+	RPCDebugHTTPPath = "/debugRPC"
+	// путь HTTP обработчика тестового RPC сервера с интеграцией с БД
+	RPCHTTPPathIntegrate = "/testRPCIntegrate"
+	// путь HTTP обработчика тестового RPC сервера с интеграцией с БД
 	RPCDebugHTTPPathIntegrate = "/debugRPCIntegrate"
 )
 
-// Создание тестового сервера
+// Создание тестового сервера на случайном порту
 func listenTCP() (net.Listener, string) {
 	l, e := net.Listen("tcp", "127.0.0.1:0")
 	if e != nil {
@@ -62,7 +70,7 @@ func createServer() {
 	httpOnce.Do(startHTTPServer)
 }
 
-// Запуск дополнительного сервера для проверки
+// Запуск дополнительного сервера с интеграцией с БД для проверки
 // работы с несколькими экземплярами одновременно
 func createIntegratingServer(i *RPCIncrementator) {
 	newServer = rpc.NewServer()
@@ -80,6 +88,7 @@ func startHTTPServer() {
 	httpServerAddr = server.Listener.Addr().String()
 }
 
+// Сводный метод тестирования RPC сервера
 func TestRPC(t *testing.T) {
 	defaultServerOnce.Do(createDefaultServer)
 	testBasicRPCClient(t, defaultServerAddr)
@@ -97,6 +106,8 @@ func TestRPC(t *testing.T) {
 	testBasicRPCClient(t, serverWithDBAddr)
 	testRPCClient(t, serverWithDBAddr)
 }
+
+// Тестирование общего обслуживания RPC запросов
 func testBasicRPCClient(t *testing.T, addr string) {
 	client, err := rpc.Dial("tcp", addr)
 	if err != nil {
@@ -132,6 +143,8 @@ func testBasicRPCClient(t *testing.T, addr string) {
 		t.Errorf("NoMethod: ожидалось получение ошибки вызова несуществующего метода; получена ошибка: %q", err)
 	}
 }
+
+// Расширенное тестирование обслуживания RPC запросов
 func testRPCClient(t *testing.T, addr string) {
 	// Создаем клиента RPC сервиса
 	client, err := rpc.Dial("tcp", addr)
@@ -177,11 +190,15 @@ func testRPCClient(t *testing.T, addr string) {
 	if reply != expectedCounterValue {
 		t.Fatalf("Неверное значение счетчика после изменения максимального значения, ожидалось: %d, получено: %d", expectedCounterValue, reply)
 	}
+	// Проверяем обработку запроса на установку шага
+	// инкрементации с неверным его значеним (отрицательным)
 	step = -3
 	err = client.Call("RPCIncrementator.SetSettings", s, nil)
 	if err == nil {
 		t.Fatal("SetSettings не вернул ошибку, при установке отрицательного шага инкрементации")
 	}
+	// Проверяем обработку запроса на установку максимального значения счетчика
+	// с неверным его значеним (отрицательным)
 	step = 2
 	maxValue = -2
 	err = client.Call("RPCIncrementator.SetSettings", s, nil)
@@ -190,6 +207,8 @@ func testRPCClient(t *testing.T, addr string) {
 	}
 
 }
+
+// Тестирование HTTP обработчиков
 func TestHTTP(t *testing.T) {
 	defaultServerOnce.Do(createDefaultServer)
 	testHTTPRPC(t, "")
@@ -273,6 +292,9 @@ func initRPCIntegration(t *testing.T) (*RPCIncrementator, func()) {
 	if i.OnUpdate == nil {
 		t.Fatal("метод initIncrementator вернул нулевой указатель на обработчик события обновления счетчика")
 	}
+	// возвращаем функцию чистки, использующую внутри себя замыкание
+	// на имена всех созданных ресурсов
+	// (в данном случае - только файлов)
 	return i, clean(tempConfigFile, tempDBName)
 }
 
