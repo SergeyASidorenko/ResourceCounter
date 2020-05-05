@@ -9,6 +9,17 @@ import (
 	"sync"
 )
 
+var (
+	// InitValue Исходное значения счетчика для вновь созданного объекта
+	InitValue int = 0
+	// InitStep Исходное значения шага инкрементации счетчика для вновь созданного объекта
+	InitStep int = 1
+	// InitMaxValue Исходное максимального значения счетчика для вновь созданного объекта
+	InitMaxValue int = 1000
+	// ResetValue Значения, в которое будет устанавливаться счетчик при превышении максимального значения
+	ResetValue int = 1
+)
+
 // Incrementator тип, позволяющий вести подсчет
 // возникновений определенного события, ресурсов и.т.д
 // Изменение счетчика реализовано через мьютекс, потому что
@@ -30,9 +41,9 @@ type Incrementator struct {
 // максимальным значеним для типа Integer
 func CreateIncrementator() *Incrementator {
 	i := new(Incrementator)
-	i.counter = 0
-	i.maxValue = 1000
-	i.step = 1
+	i.counter = InitValue
+	i.maxValue = InitMaxValue
+	i.step = InitStep
 	return i
 }
 
@@ -57,7 +68,7 @@ func (i *Incrementator) IncrementNumber() {
 	defer i.mtxCounter.Unlock()
 	i.counter += i.step
 	if i.counter > maxCounterValue {
-		i.counter = 1
+		i.counter = ResetValue
 	}
 }
 
@@ -68,6 +79,7 @@ func (i *Incrementator) SetMaximumValue(maximumValue int) error {
 	// блокируем доступ к полю максимального значения счетчика
 	i.mtxMaxValue.Lock()
 	if maximumValue < 0 {
+		i.mtxMaxValue.Unlock()
 		return errors.New("недопустимое значение максимального значения")
 	}
 	i.maxValue = maximumValue
@@ -86,7 +98,7 @@ func (i *Incrementator) SetMaximumValue(maximumValue int) error {
 func (i *Incrementator) SetStep(step int) error {
 	// блокируем доступ к полю максимального значения счетчика
 	i.mtxStep.Lock()
-	defer i.mtxCounter.Lock()
+	defer i.mtxStep.Unlock()
 	if step < 0 {
 		return errors.New("недопустимое значение шага счетчика")
 	}

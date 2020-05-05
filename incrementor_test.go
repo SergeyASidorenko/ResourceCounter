@@ -11,7 +11,7 @@ import (
 // Тестирование функции создания счетчика
 func TestCreateIncrementator(t *testing.T) {
 	incObj := CreateIncrementator()
-	maxCounterValue := 100
+	maxCounterValue := 1000
 	expectedCounterValue := 0
 	expectedStepValue := 1
 	counter := incObj.counter
@@ -106,13 +106,13 @@ func TestSetMaximumValue(t *testing.T) {
 	err = incObj.SetMaximumValue(maxCounterValue - 1)
 	if err != nil {
 		t.Fatal(`функция SetMaximumValue отработала некорректно.\n
-		После установки максимального значения меньшего текущего значения 
+		После установки максимального значения меньшего текущего значения
 		счетчика функция вернула ошибку, ожидался сброс счетчика в нуль`)
 	}
 	counter := incObj.GetNumber()
 	if counter != 0 {
 		t.Fatal(`функция SetMaximumValue отработала некорректно.\n
-		После установки максимального значения меньшего текущего значения 
+		После установки максимального значения меньшего текущего значения
 		счетчика функция вернула ошибку, ожидался сброс счетчика в нуль`)
 	}
 }
