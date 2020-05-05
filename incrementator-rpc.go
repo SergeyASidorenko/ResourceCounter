@@ -8,30 +8,31 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Settings настройки счетчика
+// Settings желаемые настройки счетчика, передаваемые клиентами по RPC протоколу
 type Settings struct {
 	Step     *int // шаг инкрементации
 	MaxValue *int // максимальное значение счетчика, по превышении которого счетчику присваивается нулевое значение
 }
 
-// OnUpdateIncrementor настройки счетчика
+// OnUpdateIncrementor функция обработчик события изменения состояния счетчика
 type OnUpdateIncrementor func() error
 
-// RPCIncrementator тип, позволяющий вести подсчет
+// RPCIncrementator объект-обертка, позволяющая вести подсчет
 // возникновений определенного события, ресурсов и.т.д
+// Используется для регистрации RPC сервера
 type RPCIncrementator struct {
 	IObj     *Incrementator
 	OnUpdate OnUpdateIncrementor
 }
 
 // CreateRPCIncrementator функция создает новый объет типа RPCIncrementator и возвращает указатель на него.
-// Инициализирует счетчик нулевым значением явно и максимальное значение -
-// максимальным значеним для типа Integer
 func CreateRPCIncrementator() *RPCIncrementator {
 	return &RPCIncrementator{CreateIncrementator(), nil}
 }
 
 // GetNumber метод возвращает текущее значение счетчика
+// req - запрос от клиента
+// resp - ответ клиенту
 // Вызов метода потокобезопасен
 func (i *RPCIncrementator) GetNumber(req int, resp *int) error {
 	*resp = i.IObj.GetNumber()
@@ -39,6 +40,8 @@ func (i *RPCIncrementator) GetNumber(req int, resp *int) error {
 }
 
 // IncrementNumber метод увеличивает значение счетчика
+// req - запрос от клиента
+// resp - ответ клиенту
 // Вызов метода потокобезопасен
 func (i *RPCIncrementator) IncrementNumber(req int, resp *int) (err error) {
 	i.IObj.IncrementNumber()
@@ -48,8 +51,10 @@ func (i *RPCIncrementator) IncrementNumber(req int, resp *int) (err error) {
 	return
 }
 
-// SetSettings метод принимает новое максимальное значения счетчика
-// В случае, если новое значение меньше нуля, - возвращает ошибку
+// SetSettings метод принимает новые настройки счетчика
+// В случае, если новые значения настроек меньше нуля, - возвращает ошибку
+// req - запрос от клиента
+// resp - ответ клиенту
 // Вызов метода потокобезопасен
 func (i *RPCIncrementator) SetSettings(req *Settings, resp *int) error {
 	// блокируем доступ к полю максимального значения счетчика

@@ -15,9 +15,6 @@ import (
 	"os"
 )
 
-// переменная, хранящая настройки веб-сервиса
-var settings *AppSettings
-
 // AppSettings структура хранения настроек веб-сервиса
 type AppSettings struct {
 	DB        string `json:"db"`
@@ -40,7 +37,6 @@ func (s *AppSettings) Load(settingsPath string) (err error) {
 }
 
 // connectToDB метод подключения к БД
-// Вызов метода потокобезопасен
 func connectToDB(dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -52,7 +48,6 @@ func connectToDB(dbPath string) (*sql.DB, error) {
 // initIncrementator инициализация состояния счетчика
 // Если во внешнем хранилище нет никаких сведений о прежних состояниях -
 // вносим запись в хранилище
-// Вызов метода потокобезопасен
 func initIncrementator(db *sql.DB, s *AppSettings) (i *RPCIncrementator, err error) {
 	// Создаем таблицу, где будет храниться состояние счетчика
 	_, err = db.Exec(fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s
@@ -92,26 +87,27 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	settings = new(AppSettings)
+	// переменная, хранящая настройки веб-сервиса
+	settings := new(AppSettings)
 	// Читаем настройки
 	err = settings.Load("config/settings.json")
 	if err != nil {
-		log.Fatalf("Ошибка инициализации сервера: %s", err.Error())
+		log.Fatalf("Ошибка инициализации сервера: %q", err.Error())
 		return
 	}
-	// инициализируем состояние счетчика
+	// инициализируем счетчик
 	inc, err := initIncrementator(db, settings)
 	if err != nil {
-		log.Fatalln("Ошибка инициализации сервера: ", err)
+		log.Fatalf("Ошибка инициализации сервера: %q", err.Error())
 	}
 	err = rpc.Register(inc)
 	if err != nil {
-		log.Fatalln("Ошибка инициализации сервера: ", err)
+		log.Fatalf("Ошибка инициализации сервера: %q", err.Error())
 	}
 	rpc.HandleHTTP()
-	listener, err := net.Listen("tcp", ":8716")
+	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		log.Fatalln("Ошибка инициализации сервера: ", err)
+		log.Fatalf("Ошибка инициализации сервера: %q", err.Error())
 	}
 	http.Serve(listener, nil)
 }

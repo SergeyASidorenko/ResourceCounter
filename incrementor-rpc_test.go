@@ -233,7 +233,7 @@ func initRPCIntegration(t *testing.T) (*RPCIncrementator, func()) {
 	if db == nil {
 		t.Fatal("метод connectToDB вернул нулевой указатель соединения с БД")
 	}
-	settings = new(AppSettings)
+	settings := new(AppSettings)
 	// Читаем настройки
 	tempConfigFile := "test_config.json"
 	file, err := os.OpenFile(tempConfigFile, os.O_RDWR|os.O_CREATE, 0755)
