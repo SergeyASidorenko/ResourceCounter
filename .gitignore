@@ -1,4 +1,3 @@
-config/*
 *.sql
 .vscode/*
 *.tmp
@@ -6,4 +5,3 @@ config/*
 *.exe
 client.go
 *.db
-*.json
