@@ -5,8 +5,6 @@ package main
 // Сведения о лицензии отсутствуют
 
 import (
-	"errors"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -57,21 +55,13 @@ func (i *RPCIncrementator) SetSettings(req *Settings, resp *int) error {
 	// блокируем доступ к полю максимального значения счетчика
 	var err error
 	if req.MaxValue != nil {
-		maxValue := *(req.MaxValue)
-		if maxValue < 0 {
-			return errors.New("недопустимое значение максимального значения")
-		}
-		err = i.IObj.SetMaximumValue(maxValue)
+		err = i.IObj.SetMaximumValue(*(req.MaxValue))
 		if err != nil {
 			return err
 		}
 	}
 	if req.Step != nil {
-		step := *(req.Step)
-		if step < 0 {
-			return errors.New("недопустимое значение шага счетчика")
-		}
-		err = i.IObj.SetStep(step)
+		err = i.IObj.SetStep(*(req.Step))
 		if err != nil {
 			return err
 		}

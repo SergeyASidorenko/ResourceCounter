@@ -6,3 +6,4 @@ config/*
 *.exe
 client.go
 *.db
+*.json

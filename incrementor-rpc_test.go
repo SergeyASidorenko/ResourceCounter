@@ -177,6 +177,18 @@ func testRPCClient(t *testing.T, addr string) {
 	if reply != expectedCounterValue {
 		t.Fatalf("Неверное значение счетчика после изменения максимального значения, ожидалось: %d, получено: %d", expectedCounterValue, reply)
 	}
+	step = -3
+	err = client.Call("RPCIncrementator.SetSettings", s, nil)
+	if err == nil {
+		t.Fatal("SetSettings не вернул ошибку, при установке отрицательного шага инкрементации")
+	}
+	step = 2
+	maxValue = -2
+	err = client.Call("RPCIncrementator.SetSettings", s, nil)
+	if err == nil {
+		t.Fatal("SetSettings не вернул ошибку, при установке отрицательного максимального значения")
+	}
+
 }
 func TestHTTP(t *testing.T) {
 	defaultServerOnce.Do(createDefaultServer)
