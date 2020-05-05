@@ -9,6 +9,7 @@ services:
     volumes:
       - ./data/db:/data/db
   incrementator:
+    image: incrementator
     container_name: incrementator
     restart: always
     ports:
@@ -17,4 +18,3 @@ services:
       - sqlite3
     depends_on:
       - sqlite3
-    build: ./

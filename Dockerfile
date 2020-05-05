@@ -3,12 +3,12 @@ FROM golang:alpine3.11 as alpine
 
 LABEL version="1.0.0"
 LABEL maintainer="Sergey Sidorenko <carotage@mail.ru>"
-
-RUN mkdir -p $GOPATH/src/incrementator
-WORKDIR $GOPATH/src/incrementator
+RUN mkdir -p /web/incrementator
+WORKDIR /web/incrementator
 COPY . .
+RUN apk add git
+RUN apk add --update gcc musl-dev
 RUN go get -d -v
-RUN GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o $GOBIN/incrementator
-FROM scratch
-COPY --from=alpine $GOBIN/incrementator $GOBIN/incrementator
-ENTRYPOINT ["$GOBIN/incrementator"]
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o incrementator
+CMD ["./incrementator"]
+EXPOSE 8080
