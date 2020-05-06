@@ -13,7 +13,7 @@ services:
     container_name: incrementator
     restart: always
     ports:
-      - 8080:8717
+      - 8080:8080
     links:
       - sqlite3
     depends_on:
