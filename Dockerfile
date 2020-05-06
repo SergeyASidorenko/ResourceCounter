@@ -1,5 +1,5 @@
 #docker/dockerfile:latest
-FROM golang:alpine3.11 as alpine
+FROM golang:alpine3.11
 
 LABEL version="1.0.0"
 LABEL maintainer="Sergey Sidorenko <carotage@mail.ru>"

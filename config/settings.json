@@ -1,4 +1,5 @@
 {
     "db": "incrementor.db",
-    "table_name": "incrementor"
+    "table_name": "incrementor",
+    "log_file": "logs/errors.log"
 }

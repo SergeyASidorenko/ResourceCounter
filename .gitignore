@@ -1,5 +1,6 @@
+.vscode/
+logs/
 *.sql
-.vscode/*
 *.tmp
 *.log
 *.exe

@@ -4,6 +4,7 @@ package main
 // Пакет с реализацией RPC сервера работы со счетчиком
 // Сведения о лицензии отсутствуют
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"log"
@@ -23,8 +24,8 @@ var (
 	defaultServerAddr, serverAddr, serverWithDBAddr, httpServerAddr string
 	// объекта для выполнения единоразовой инициализации развертываемых тестовых RPC серверов
 	defaultServerOnce, serverWithDBOnce, serverOnce, httpOnce sync.Once
-	// имя временной (для тестирования) БД
-	tempDBName string
+	i                                                         *RPCIncrementator
+	db                                                        *sql.DB
 )
 
 const (
@@ -36,6 +37,10 @@ const (
 	RPCHTTPPathIntegrate = "/testRPCIntegrate"
 	// путь HTTP обработчика тестового RPC сервера с интеграцией с БД
 	RPCDebugHTTPPathIntegrate = "/debugRPCIntegrate"
+	// имя временной (для тестирования) БД
+	tempDBName string = "test.db"
+	// имя временной (для тестирования) БД
+	tableName string = "incrementator"
 )
 
 // Создание тестового сервера на случайном порту
@@ -72,7 +77,7 @@ func createServer() {
 
 // Запуск дополнительного сервера с интеграцией с БД для проверки
 // работы с несколькими экземплярами одновременно
-func createIntegratingServer(i *RPCIncrementator) {
+func createIntegratingServer() {
 	newServer = rpc.NewServer()
 	newServer.Register(i)
 	var l net.Listener
@@ -90,6 +95,7 @@ func startHTTPServer() {
 
 // Сводный метод тестирования RPC сервера
 func TestRPC(t *testing.T) {
+	defer clean(tempDBName)
 	defaultServerOnce.Do(createDefaultServer)
 	testBasicRPCClient(t, defaultServerAddr)
 	testRPCClient(t, defaultServerAddr)
@@ -97,12 +103,8 @@ func TestRPC(t *testing.T) {
 	testBasicRPCClient(t, serverAddr)
 	testRPCClient(t, serverAddr)
 	// Тестирование сервиса с интеграцией с БД
-	i, clean := initRPCIntegration(t)
-	defer clean()
-	createServerWithDB := func() {
-		createIntegratingServer(i)
-	}
-	serverWithDBOnce.Do(createServerWithDB)
+	initRPCWithDBIntegration(t)
+	serverWithDBOnce.Do(createIntegratingServer)
 	testBasicRPCClient(t, serverWithDBAddr)
 	testRPCClient(t, serverWithDBAddr)
 }
@@ -205,7 +207,6 @@ func testRPCClient(t *testing.T, addr string) {
 	if err == nil {
 		t.Fatal("SetSettings не вернул ошибку, при установке отрицательного максимального значения")
 	}
-
 }
 
 // Тестирование HTTP обработчиков
@@ -214,12 +215,8 @@ func TestHTTP(t *testing.T) {
 	testHTTPRPC(t, "")
 	serverOnce.Do(createServer)
 	testHTTPRPC(t, RPCHTTPPath)
-	i, clean := initRPCIntegration(t)
-	defer clean()
-	createServerWithDB := func() {
-		createIntegratingServer(i)
-	}
-	serverWithDBOnce.Do(createServerWithDB)
+	initRPCWithDBIntegration(t)
+	serverWithDBOnce.Do(createIntegratingServer)
 	testHTTPRPC(t, RPCHTTPPathIntegrate)
 }
 
@@ -243,8 +240,7 @@ func testHTTPRPC(t *testing.T, path string) {
 }
 
 // Метод подключения к БД и инициализации RPC объекта с интеграцией с БД
-func initRPCIntegration(t *testing.T) (*RPCIncrementator, func()) {
-	tempDBName = "temp.db"
+func initRPCWithDBIntegration(t *testing.T) {
 	db, err := connectToDB(tempDBName)
 	if err != nil {
 		t.Fatal(err)
@@ -252,15 +248,50 @@ func initRPCIntegration(t *testing.T) (*RPCIncrementator, func()) {
 	if db == nil {
 		t.Fatal("метод connectToDB вернул нулевой указатель соединения с БД")
 	}
+	i, err = initIncrementator(db, tableName)
+	if err != nil {
+		t.Fatalf("метод initIncrementator вернул ошибку: %q", err.Error())
+	}
+	if i == nil {
+		t.Fatal("метод initIncrementator вернул нулевой указатель объекта RPCIncrementor")
+	}
+	if i.IObj == nil {
+		t.Fatal("метод initIncrementator вернул нулевой указатель объекта Incrementor")
+	}
+	if i.OnUpdate == nil {
+		t.Fatal("метод initIncrementator вернул нулевой указатель на обработчик события обновления счетчика")
+	}
+}
+
+// Тестирование создания/загрузки файла логирования приложения
+func TestInitLog(t *testing.T) {
+	logFilePath := "test_errors.log"
+	defer clean(logFilePath)
+	// Тестирование создания файла логирования приложения
+	err := initLog(logFilePath)
+	if err != nil {
+		t.Fatalf("Функция создания/загрузки файла логирования вернула ошибку: %q", err.Error())
+	}
+	// Тестирование загрузки файла логирования приложения
+	err = initLog(logFilePath)
+	if err != nil {
+		t.Fatalf("Функции создания/загрузки файла логирования не удалось использовать уже ранее созданный файл: %q", err.Error())
+	}
+}
+
+// Тестирование загрузки настроек приложения
+func TestLoadSettings(t *testing.T) {
+	tempConfigFile := "test_config.json"
+	defer clean(tempConfigFile)
 	settings := new(AppSettings)
 	// Читаем настройки
-	tempConfigFile := "test_config.json"
 	file, err := os.OpenFile(tempConfigFile, os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
 		log.Fatalf("Ошибка при создании временного файла настроек: %q", err.Error())
 	}
 	settings.DB = tempDBName
-	settings.TableName = "incrementator"
+	settings.TableName = tableName
+	settings.LogFilePath = tempConfigFile
 	data, err := json.Marshal(settings)
 	if err != nil {
 		log.Fatalf("Ошибка сериализации временного объекта настроек приложения: %q", err.Error())
@@ -279,23 +310,6 @@ func initRPCIntegration(t *testing.T) (*RPCIncrementator, func()) {
 	if settings.TableName == "" {
 		t.Fatal("Метод загрузки настроек приложения Load  неверно считал имя таблицы")
 	}
-	i, err := initIncrementator(db, settings)
-	if err != nil {
-		t.Fatalf("метод initIncrementator вернул ошибку: %q", err.Error())
-	}
-	if i == nil {
-		t.Fatal("метод initIncrementator вернул нулевой указатель объекта RPCIncrementor")
-	}
-	if i.IObj == nil {
-		t.Fatal("метод initIncrementator вернул нулевой указатель объекта Incrementor")
-	}
-	if i.OnUpdate == nil {
-		t.Fatal("метод initIncrementator вернул нулевой указатель на обработчик события обновления счетчика")
-	}
-	// возвращаем функцию чистки, использующую внутри себя замыкание
-	// на имена всех созданных ресурсов
-	// (в данном случае - только файлов)
-	return i, clean(tempConfigFile, tempDBName)
 }
 
 // Очитска файловой системы и освобождение ресурсов после тестирования
