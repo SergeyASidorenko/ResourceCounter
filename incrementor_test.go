@@ -11,17 +11,17 @@ import (
 // Тестирование функции создания счетчика
 func TestCreateIncrementator(t *testing.T) {
 	incObj := CreateIncrementator()
-	maxCounterValue := 1000
-	expectedCounterValue := 0
+	expectedValue := 0
+	expectedMaxValue := 1000
 	expectedStepValue := 1
 	counter := incObj.counter
-	if counter != 0 {
+	if counter != expectedValue {
 		t.Fatalf(`функция CreateIncrementator создает объект типа Incrementator с некорректным значением счетчика.\n
-		Ожидалось: %d, получено: %d`, expectedCounterValue, counter)
+		Ожидалось: %d, получено: %d`, expectedValue, counter)
 	}
-	if incObj.maxValue != maxCounterValue {
+	if incObj.maxValue != expectedMaxValue {
 		t.Fatalf(`функция CreateIncrementator создает объект типа Incrementator с некорректным максимальным значением.\n
-		Ожидалось: %d, получено: %d`, maxCounterValue, incObj.maxValue)
+		Ожидалось: %d, получено: %d`, expectedMaxValue, incObj.maxValue)
 	}
 	if incObj.step != expectedStepValue {
 		t.Fatalf(`функция CreateIncrementator создает объект типа Incrementator с некорректным шагом инкрементации.\n
