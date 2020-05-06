@@ -25,21 +25,22 @@ var (
 	// объекта для выполнения единоразовой инициализации развертываемых тестовых RPC серверов
 	defaultServerOnce, serverWithDBOnce, serverOnce, httpOnce sync.Once
 	i                                                         *RPCIncrementator
-	db                                                        *sql.DB
+	// указатель на объект подключения к БД в интеграционных тестах
+	db *sql.DB
 )
 
 const (
 	// путь HTTP обработчика тестового RPC сервера
 	RPCHTTPPath = "/testRPC"
-	// путь HTTP обработчика тестового RPC сервера
+	// путь отладочного HTTP обработчика тестового RPC сервера
 	RPCDebugHTTPPath = "/debugRPC"
 	// путь HTTP обработчика тестового RPC сервера с интеграцией с БД
 	RPCHTTPPathIntegrate = "/testRPCIntegrate"
-	// путь HTTP обработчика тестового RPC сервера с интеграцией с БД
+	// путь отладочного HTTP обработчика тестового RPC сервера с интеграцией с БД
 	RPCDebugHTTPPathIntegrate = "/debugRPCIntegrate"
 	// имя временной (для тестирования) БД
 	tempDBName string = "test.db"
-	// имя временной (для тестирования) БД
+	// имя таблицы хранения состояния счетчика во временной (для тестирования) БД
 	tableName string = "incrementator"
 )
 
