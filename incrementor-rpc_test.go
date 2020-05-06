@@ -313,13 +313,11 @@ func TestLoadSettings(t *testing.T) {
 }
 
 // Очитска файловой системы и освобождение ресурсов после тестирования
-func clean(files ...string) func() {
-	return func() {
-		for _, file := range files {
-			err := os.Remove(file)
-			if err != nil {
-				log.Printf("ошибка при очистке: %q", err.Error())
-			}
+func clean(files ...string) {
+	for _, file := range files {
+		err := os.Remove(file)
+		if err != nil {
+			log.Printf("ошибка при очистке: %q", err.Error())
 		}
 	}
 }
